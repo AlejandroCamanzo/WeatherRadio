@@ -5,44 +5,41 @@
 # ${2} = Satellite transmission frecuency
 
 
-PREDICTION_START=`/usr/bin/predict -t ~/weather.tle -p "${1}" | head -1`
-PREDICTION_END=`/usr/bin/predict -t ~/weather.tle -p "${1}" | tail -1`
-# this stores the time of pass end in seconds from epoch
-secs=`echo $PREDICTION_END | cut -d " " -f 1`
+# Initial prediction
+PREDICTION_START=$(predict -t ~/weather.tle -p "${1}" | head -1)
+PREDICTION_END=$(predict -t ~/weather.tle -p "${1}" | tail -1)
+MAXELEV=$(predict -t ~/weather.tle -p "${1}" | awk -v max=0 '{if($5>max){max=$5}}END{print max}')
+ends=$(echo $PREDICTION_END | cut -d " " -f 1)
 
-MAXELEV=`/usr/bin/predict -t $dir/weather.tle -p "${1}" | awk -v max=0 '{if($5>max){max=$5}}END{print max}'`
 
-echo $PREDICTION_START
-echo $PREDICTION_END
-echo $secs
-echo $MAXELEV
+while [ $(date --date="TZ=\"UTC\" @$ends" +%D) == `date +%D` ]; do
 
-while [ `date --date='TZ="UTC" @1564254327' +%D` == `date +%D` ]; do
+echo ----- new prediction -----
+echo start: "$PREDICTION_START"
+echo end: "$PREDICTION_END"
+echo max elev: "$MAXELEV"
 
-START_TIME=`echo $PREDICTION_START | cut -d " " -f 3-4`
-var1=`echo $PREDICTION_START | cut -d " " -f 1`
+START_TIME=$(echo $PREDICTION_START | cut -d " " -f 3-4)
+starts=$(echo $PREDICTION_START | cut -d " " -f 1)
+var=$(echo $START_TIME | cut -d " " -f 2 | cut -d ":" -f 3)
 
-var3=`echo $START_TIME | cut -d " " -f 2 | cut -d ":" -f 3`
-
-TIMER=`expr $var2 - $var1 + $var3`
-
+TIMER=`expr $ends - $starts + $var`
 OUTDATE=`date --date="TZ=\"UTC\" $START_TIME" +%Y%m%d-%H%M%S`
 
 if [ $MAXELEV -gt 19 ]
   then
+    echo Satellite pass valid, scheduling recording
     echo ${1//" "}${OUTDATE} $MAXELEV
-
-    echo "$dir/capture_satellite_pass.sh \"${1}\" $2 $dir/../${1//" "}${OUTDATE} $dir/weather.tle $var1 $TIMER" | at `date --date="TZ=\"UTC\" $START_TIME" +"%H:%M %D"`
+    echo "$dir/capture_satellite_pass.sh \"${1}\" $2 $dir/../${1//" "}${OUTDATE} ~/weather.tle $starts $TIMER" | at `date --date="TZ=\"UTC\" $START_TIME" +"%H:%M %D"`
 
 fi
 
-nextpredict=`expr $var2 + 60`
-
-PREDICTION_START=`/usr/bin/predict -t $dir/weather.tle -p "${1}" $nextpredict | head -1`
-PREDICTION_END=`/usr/bin/predict -t $dir/weather.tle -p "${1}"  $nextpredict | tail -1`
-
-MAXELEV=`/usr/bin/predict -t $dir/weather.tle -p "${1}" $nextpredict | awk -v max=0 '{if($5>max){max=$5}}END{print max}'`
-
-var2=`echo $PREDICTION_END | cut -d " " -f 1`
+# Next prediction
+nextpredict=`expr $ends + 60`
+PREDICTION_START=`predict -t ~/weather.tle -p "${1}" $nextpredict | head -1`
+PREDICTION_END=`predict -t ~/weather.tle -p "${1}"  $nextpredict | tail -1`
+MAXELEV=`predict -t ~/weather.tle -p "${1}" $nextpredict | awk -v max=0 '{if($5>max){max=$5}}END{print max}'`
+ends=`echo $PREDICTION_END | cut -d " " -f 1`
 
 done
+echo finished scheduling

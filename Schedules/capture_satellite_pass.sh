@@ -7,12 +7,13 @@
 # $5 = EPOC start time
 # $6 = Time to capture
 
-# 
-dir=$(pwd)
-#Testing script
-touch $dir/testpass
-echo a new pass: $1 $2 $3 $4 $5 $6 > $dir/testpass
-echo a new pass: $1 $2 $3 $4 $5 $6
+sudo timeout $6 rtl_fm -f ${2}M -s 60k -g 25 -p 55 -E wav -E deemp -F 9 - | sox -t wav - $3.wav rate 11025
 
-# Start GNU Radio script to record
-# bla bla bla
+PassStart=`expr $5 + 90`
+
+if [ -e $3.wav ]
+  then
+    /usr/local/bin/wxmap -T "${1}" -H $4 -p 0 -l 0 -o $PassStart ${3}-map.png
+    
+    /usr/local/bin/wxtoimg -m ${3}-map.png -e ZA $3.wav $3.png
+fi

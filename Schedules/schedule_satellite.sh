@@ -6,9 +6,9 @@
 
 
 # Initial prediction
-PREDICTION_START=$(predict -t ~/weather.tle -p "${1}" | head -1)
-PREDICTION_END=$(predict -t ~/weather.tle -p "${1}" | tail -1)
-MAXELEV=$(predict -t ~/weather.tle -p "${1}" | awk -v max=0 '{if($5>max){max=$5}}END{print max}')
+PREDICTION_START=$(predict -t /tmp/weather.tle -p "${1}" | head -1)
+PREDICTION_END=$(predict -t /tmp/weather.tle -p "${1}" | tail -1)
+MAXELEV=$(predict -t /tmp/weather.tle -p "${1}" | awk -v max=0 '{if($5>max){max=$5}}END{print max}')
 ends=$(echo $PREDICTION_END | cut -d " " -f 1)
 
 
@@ -30,16 +30,14 @@ if [ $MAXELEV -gt 19 ]
   then
     echo Satellite pass valid, scheduling recording
     echo ${1//" "}${OUTDATE} $MAXELEV
-    echo "$dir/capture_satellite_pass.sh \"${1}\" $2 $dir/../${1//" "}${OUTDATE} ~/weather.tle $starts $TIMER" | at `date --date="TZ=\"UTC\" $START_TIME" +"%H:%M %D"`
-
+    echo "/home/pi/Repositories/WeatherRadio/Schedules/capture_satellite_pass.sh \"${1}\" $2 /home/pi/Repositories/WeatherRadio/${1//" "}${OUTDATE} /tmp/weather.tle $starts $TIMER" | at `date --date="TZ=\"UTC\" $START_TIME" +"%H:%M %D"`
 fi
 
 # Next prediction
 nextpredict=`expr $ends + 60`
-PREDICTION_START=`predict -t ~/weather.tle -p "${1}" $nextpredict | head -1`
-PREDICTION_END=`predict -t ~/weather.tle -p "${1}"  $nextpredict | tail -1`
-MAXELEV=`predict -t ~/weather.tle -p "${1}" $nextpredict | awk -v max=0 '{if($5>max){max=$5}}END{print max}'`
+PREDICTION_START=`predict -t /tmp/weather.tle -p "${1}" $nextpredict | head -1`
+PREDICTION_END=`predict -t /tmp/weather.tle -p "${1}"  $nextpredict | tail -1`
+MAXELEV=`predict -t /tmp/weather.tle -p "${1}" $nextpredict | awk -v max=0 '{if($5>max){max=$5}}END{print max}'`
 ends=`echo $PREDICTION_END | cut -d " " -f 1`
 
 done
-echo finished scheduling
